@@ -4,8 +4,8 @@ python -u run.py \
     --is_training 1 \
     --device cuda \
     --dataset_name mnist \
-    --train_data_paths /home/hmao/Documents/ece696_project/data/moving-mnist-train.npz \
-    --valid_data_paths /home/hmao/Documents/ece696_project/data/moving-mnist-valid.npz \
+    --train_data_paths /home/hmao/Documents/ece696_project/data/moving-mnist-example/moving-mnist-train.npz \
+    --valid_data_paths /home/hmao/Documents/ece696_project/data/moving-mnist-example/moving-mnist-valid.npz \
     --save_dir /home/hmao/Documents/ece696_project/checkpoints/mnist_predrnn_v2 \
     --gen_frm_dir /home/hmao/Documents/ece696_project/results/mnist_predrnn_v2 \
     --model_name predrnn_v2 \
