@@ -104,7 +104,12 @@ def test(model, test_input_handle, configs, itr):
 
             psnr[i] += metrics.batch_psnr(pred_frm, real_frm)
             for b in range(configs.batch_size):
-                score, _ = compare_ssim(pred_frm[b], real_frm[b], full=True, multichannel=True)
+                # import pdb; pdb.set_trace()
+                # For mnist 64x64x1 to 64x64
+                pred_reshaped = pred_frm[b].reshape(64, 64)
+                real_reshaped = real_frm[b].reshape(64, 64)
+                # print(pred_reshaped.shape)
+                score, _ = compare_ssim(pred_reshaped, real_reshaped, full=True, multichannel=True)
                 ssim[i] += score
 
         # save prediction examples
