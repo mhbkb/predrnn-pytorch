@@ -5,7 +5,7 @@ import numpy as np
 #from skimage.measure import compare_ssim
 from skimage.metrics import structural_similarity as compare_ssim
 from core.utils import preprocess, metrics
-from attack.fast_gradient_method import fast_gradient_method
+from attack.pgd_method import pgd_attack
 import lpips
 import torch
 
@@ -28,7 +28,7 @@ def train(model, ims, real_input_flag, configs, itr):
 def test(model, test_input_handle, configs, itr):
     print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'test...')
     test_input_handle.begin(do_shuffle=False)
-    res_path = os.path.join(configs.gen_frm_dir, str(itr) + '_fgsm_attacker_pix')
+    res_path = os.path.join(configs.gen_frm_dir, str(itr) + '_pgd_attacker')
     os.mkdir(res_path)
     avg_mse = 0
     batch_id = 0
@@ -59,28 +59,26 @@ def test(model, test_input_handle, configs, itr):
 
     l2 = 0
     while (test_input_handle.no_batch_left() == False):
+        # import pdb; pdb.set_trace()
         batch_id = batch_id + 1
         test_ims = test_input_handle.get_batch()
         test_dat = preprocess.reshape_patch(test_ims, configs.patch_size)
         test_ims = test_ims[:, :, :, :, :configs.img_channel]
 
-        # Attack first 10 images
-        test_dat_10 = test_dat[:, :10, :, :, :]
-        frames_tensor = torch.FloatTensor(test_dat_10).to(configs.device)
-        mask_tensor = torch.FloatTensor(real_input_flag).to(configs.device)
-        # import pdb; pdb.set_trace()
-        configs.total_length = 10
-        new_test_dat = fast_gradient_method(model.network, frames_tensor, mask_tensor, eps=0, norm=np.inf, clip_min=0., clip_max=1.)
+        frames_tensor = torch.FloatTensor(test_dat)
+        mask_tensor = torch.FloatTensor(real_input_flag)
+        labels = torch.FloatTensor(test_dat[:, 10:, :, :, :])
+
+        new_test_dat = pgd_attack(model.network, frames_tensor, mask_tensor, labels, configs.device)
         new_test_dat = new_test_dat.to('cpu')
-
-        l2 += torch.dist(torch.from_numpy(test_dat_10), new_test_dat)
-
         new_test_dat = new_test_dat.detach().numpy()
-        test_dat[:, :10, :, :, :] = new_test_dat
-        configs.total_length = 20
-        # Attack done
 
-        img_gen = model.test(test_dat, real_input_flag)
+        new_test_dat[:, :9, :, :, :] = test_dat[:, :9, :, :, :]
+        new_test_dat[:, 10:, :, :, :] = test_dat[:, 10:, :, :, :]
+
+        l2 += torch.dist(torch.from_numpy(test_dat), torch.from_numpy(new_test_dat))
+
+        img_gen = model.test(new_test_dat, real_input_flag)
 
         img_gen = preprocess.reshape_patch_back(img_gen, configs.patch_size)
         output_length = configs.total_length - configs.input_length 
@@ -133,7 +131,7 @@ def test(model, test_input_handle, configs, itr):
                 ssim[i] += score
 
         # save prediction examples
-        test_dat = preprocess.reshape_patch_back(test_dat, configs.patch_size)
+        new_test_dat = preprocess.reshape_patch_back(new_test_dat, configs.patch_size)
         if batch_id <= configs.num_save_samples:
             path = os.path.join(res_path, str(batch_id))
             os.mkdir(path)
@@ -141,10 +139,11 @@ def test(model, test_input_handle, configs, itr):
                 name = 'gt' + str(i + 1) + '.png'
                 file_name = os.path.join(path, name)
                 img_gt = np.uint8(test_ims[0, i, :, :, :] * 255)
-                # save the fgsm attacked image
+
+                 # save the fgsm attacked image
                 name2 = 'attack' + str(i + 1) + '.png'
                 file_name2 = os.path.join(path, name2)
-                img_attk = np.uint8(test_dat[0, i, :, :, :] * 255)
+                img_attk = np.uint8(new_test_dat[0, i, :, :, :] * 255)
 
                 cv2.imwrite(file_name2, img_attk)
                 cv2.imwrite(file_name, img_gt)
@@ -157,6 +156,11 @@ def test(model, test_input_handle, configs, itr):
                 img_pd = np.uint8(img_pd * 255)
                 cv2.imwrite(file_name, img_pd)
         test_input_handle.next()
+
+        if batch_id == 10:
+            break
+
+    print('printing metrix ')
 
     avg_mse = avg_mse / (batch_id * configs.batch_size)
     print('mse per seq: ' + str(avg_mse))

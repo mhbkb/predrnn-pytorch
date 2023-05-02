@@ -16,7 +16,7 @@ import core.mnist_fgsm_attacker_pix_first as mnist_fgsm_attacker_pix_first
 import core.mnist_fgsm_attacker_pix_5th as mnist_fgsm_attacker_pix_5th
 import core.mnist_fgsm_attacker_pix_10th as mnist_fgsm_attacker_pix_10th
 import core.mnist_fgsm_attacker_pix_9th as mnist_fgsm_attacker_pix_9th
-import core.mnist_pgd_attacker as mnist_pgd_attacker
+import core.mnist_pgd_attacker_10th as mnist_pgd_attacker_10th
 
 
 
@@ -215,7 +215,7 @@ def test_wrapper(model):
     test_input_handle = datasets_factory.data_provider(
         args.dataset_name, args.train_data_paths, args.valid_data_paths, args.batch_size, args.img_width,
         seq_length=args.total_length, injection_action=args.injection_action, is_training=False)
-    mnist_pgd_attacker.test(model, test_input_handle, args, 'test_result')
+    mnist_fgsm_attacker_pix_10th.test(model, test_input_handle, args, 'test_result')
 
 
 if os.path.exists(args.save_dir):

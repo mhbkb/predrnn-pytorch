@@ -8,7 +8,7 @@ import torch.utils.data as Data
 import torchvision.datasets as dsets
 import torchvision.transforms as transforms
 
-def pgd_attack(model, images, mask, labels, device, eps=0.3, alpha=2/255, iters=40) :
+def pgd_attack(model, images, mask, labels, device, eps=0.1, alpha=2/255, iters=200) :
     images = images.to(device)
     mask = mask.to(device)
     labels = labels.to(device)
@@ -19,6 +19,7 @@ def pgd_attack(model, images, mask, labels, device, eps=0.3, alpha=2/255, iters=
     for i in range(iters) :    
         # import pdb; pdb.set_trace()
         images.requires_grad = True
+        
         outputs = model(images, mask)[0]
         outputs = outputs[:, -10:, :, :, :]
         
